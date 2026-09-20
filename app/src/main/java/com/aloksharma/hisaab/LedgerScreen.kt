@@ -125,11 +125,29 @@ fun LedgerScreen(
         } else {
             grouped.forEach { (dayStart, rows) ->
                 item(key = "day-$dayStart") {
-                    Text(
-                        dayHeaderLabel(context, strings, dayStart),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    // A paper ledger carries the day's total in the margin. Without it the
+                    // list answers "what did I buy" but never "what did today cost".
+                    val dayNet = rows.sumOf {
+                        if (it.type == TxnType.DEBIT) -it.amountPaise else it.amountPaise
+                    }
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            dayHeaderLabel(context, strings, dayStart),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        // Same sign convention as the rows below it: a true minus, not a
+                        // hyphen, and an explicit plus so a day that earned reads as one.
+                        Text(
+                            (if (dayNet < 0) "−" else "+") + money(kotlin.math.abs(dayNet), masked),
+                            style = moneyStyle(MaterialTheme.typography.labelMedium),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
                 items(rows, key = { it.id }) { txn -> TransactionRow(txn, strings, masked) }
             }
@@ -197,7 +215,11 @@ private fun TotalTile(label: String, amount: String, modifier: Modifier = Modifi
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.height(4.dp))
-            Text(amount, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text(
+                amount,
+                style = moneyStyle(MaterialTheme.typography.titleMedium),
+                fontWeight = FontWeight.Bold,
+            )
         }
     }
 }
@@ -263,6 +285,7 @@ private fun TransactionRow(txn: Transaction, strings: Strings, masked: Boolean) 
         }
         Text(
             (if (incoming) "+" else "−") + money(txn.amountPaise, masked),
+            style = moneyStyle(),
             fontWeight = FontWeight.SemiBold,
             color = if (incoming) HisaabTheme.ledger.credit else HisaabTheme.ledger.debit,
         )

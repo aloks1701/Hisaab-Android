@@ -9,6 +9,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
 
 /**
  * Paper-and-ink palette, carried over from the web app so the two feel like one product:
@@ -136,3 +137,16 @@ private val CategoryDark = mapOf(
 fun categoryColor(category: Category): Color =
     (if (HisaabTheme.ledger.isDark) CategoryDark else CategoryLight)[category]
         ?: MaterialTheme.colorScheme.onSurfaceVariant
+
+
+/**
+ * Money always sets in tabular figures.
+ *
+ * Proportional digits are the default, so "1" is narrower than "8" and a column of amounts
+ * comes out visually ragged however carefully it is right-aligned. "tnum" gives every digit
+ * the same advance width, which is the whole reason a ledger's numbers line up. This is the
+ * difference between a list of transactions and a ledger.
+ */
+@Composable
+fun moneyStyle(base: TextStyle = MaterialTheme.typography.bodyLarge): TextStyle =
+    base.copy(fontFeatureSettings = "tnum")

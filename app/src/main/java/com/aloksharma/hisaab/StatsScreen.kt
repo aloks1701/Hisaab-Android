@@ -148,7 +148,7 @@ fun StatsScreen(
                         )
                         Text(
                             money(paise, masked),
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = moneyStyle(MaterialTheme.typography.bodyMedium),
                             fontWeight = FontWeight.Medium,
                         )
                     }
@@ -172,7 +172,7 @@ private fun YearStrip(byMonth: List<Pair<Period, Long>>, strings: Strings, maske
     Column(Modifier.fillMaxWidth()) {
         Text(
             money(total, masked),
-            style = MaterialTheme.typography.headlineLarge,
+            style = moneyStyle(MaterialTheme.typography.headlineLarge),
             fontWeight = FontWeight.Bold,
         )
         Spacer(Modifier.height(12.dp))
@@ -261,7 +261,11 @@ private fun CategoryDonut(
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Text(centerValue, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Text(
+                centerValue,
+                style = moneyStyle(MaterialTheme.typography.titleLarge),
+                fontWeight = FontWeight.Bold,
+            )
         }
     }
 }
@@ -274,7 +278,11 @@ private fun SummaryTile(label: String, value: String, modifier: Modifier = Modif
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Text(value, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+        Text(
+            value,
+            style = moneyStyle(MaterialTheme.typography.titleSmall),
+            fontWeight = FontWeight.SemiBold,
+        )
     }
 }
 
@@ -288,7 +296,7 @@ fun CategoryBar(
     Column(Modifier.fillMaxWidth()) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text(label, style = MaterialTheme.typography.bodyMedium)
-            Text(amount, style = MaterialTheme.typography.bodyMedium)
+            Text(amount, style = moneyStyle(MaterialTheme.typography.bodyMedium))
         }
         Spacer(Modifier.height(4.dp))
         Box(
