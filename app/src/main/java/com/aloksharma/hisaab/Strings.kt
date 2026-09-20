@@ -17,6 +17,8 @@ data class Strings(
     val granted: String,
     val simulate: String,
     val needsReview: String,
+    val today: String,
+    val yesterday: String,
     val categories: Map<Category, String>,
 ) {
     companion object {
@@ -37,6 +39,8 @@ data class Strings(
             granted = "अनुमति मिल गई",
             simulate = "डेमो पेमेंट डालें",
             needsReview = "जाँच लें",
+            today = "आज",
+            yesterday = "कल",
             categories = mapOf(
                 Category.FOOD to "खाना",
                 Category.GROCERIES to "राशन",
@@ -67,6 +71,8 @@ data class Strings(
             granted = "Access granted",
             simulate = "Add demo payment",
             needsReview = "Check",
+            today = "Today",
+            yesterday = "Yesterday",
             categories = mapOf(
                 Category.FOOD to "Food",
                 Category.GROCERIES to "Groceries",
