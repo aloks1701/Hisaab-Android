@@ -9,6 +9,8 @@ import androidx.room.PrimaryKey
 import androidx.room.Query
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.room.TypeConverter
 import androidx.room.TypeConverters
 import kotlinx.coroutines.flow.Flow
@@ -28,6 +30,8 @@ data class Transaction(
     val sourceText: String,
     val timestamp: Long,
     val needsReview: Boolean = false,
+    /** Android package that posted the notification, so the row can show where it came from. */
+    val sourcePackage: String? = null,
 )
 
 class Converters {
@@ -52,7 +56,15 @@ interface TransactionDao {
     suspend fun countSimilar(amountPaise: Long, merchant: String, since: Long, until: Long): Int
 }
 
-@Database(entities = [Transaction::class], version = 1, exportSchema = false)
+/** v1 -> v2 adds sourcePackage. Kept as a real migration rather than a destructive fallback:
+ *  a ledger that silently loses rows on upgrade is worse than no ledger. */
+val MIGRATION_1_2 = object : Migration(1, 2) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE transactions ADD COLUMN sourcePackage TEXT")
+    }
+}
+
+@Database(entities = [Transaction::class], version = 2, exportSchema = false)
 @TypeConverters(Converters::class)
 abstract class HisaabDatabase : RoomDatabase() {
     abstract fun transactions(): TransactionDao
@@ -63,7 +75,7 @@ abstract class HisaabDatabase : RoomDatabase() {
         fun get(context: Context): HisaabDatabase = instance ?: synchronized(this) {
             instance ?: Room.databaseBuilder(
                 context.applicationContext, HisaabDatabase::class.java, "hisaab.db"
-            ).build().also { instance = it }
+            ).addMigrations(MIGRATION_1_2).build().also { instance = it }
         }
     }
 }
@@ -80,7 +92,11 @@ class LedgerRepository(private val dao: TransactionDao) {
      * Both the live listener and the debug simulator go through here so the demo exercises
      * the real pipeline. Returns null when the text isn't a payment or is a duplicate.
      */
-    suspend fun ingest(text: String, timestamp: Long = System.currentTimeMillis()): Long? {
+    suspend fun ingest(
+        text: String,
+        timestamp: Long = System.currentTimeMillis(),
+        sourcePackage: String? = null,
+    ): Long? {
         val parsed = NotificationParser.parse(text) ?: return null
         return record(
             Transaction(
@@ -91,6 +107,7 @@ class LedgerRepository(private val dao: TransactionDao) {
                 sourceText = text,
                 timestamp = timestamp,
                 needsReview = parsed.needsReview,
+                sourcePackage = sourcePackage,
             )
         )
     }

@@ -165,3 +165,44 @@ object Categorizer {
         }
     }
 }
+
+/**
+ * Maps the Android package that posted a notification to a short label for the row's pill,
+ * so a glance tells you a payment came from GPay rather than your bank app.
+ *
+ * ponytail: a hand-kept list. An unknown package simply shows no pill, which is the right
+ * failure - a wrong bank name is worse than none. Extend it when a real device turns up a
+ * package that isn't here.
+ */
+object SourceApp {
+
+    private val LABELS: Map<String, String> = mapOf(
+        // UPI apps
+        "com.google.android.apps.nbu.paisa.user" to "GPay",
+        "com.phonepe.app" to "PhonePe",
+        "com.phonepe.app.preprod" to "PhonePe",
+        "net.one97.paytm" to "Paytm",
+        "in.org.npci.upiapp" to "BHIM",
+        "in.amazon.mShop.android.shopping" to "Amazon Pay",
+        "com.whatsapp" to "WhatsApp",
+        "com.dreamplug.androidapp" to "CRED",
+        // Bank apps
+        "com.snapwork.hdfc" to "HDFC",
+        "com.hdfc.mobilebanking" to "HDFC",
+        "com.csam.icici.bank.imobile" to "ICICI",
+        "com.icicibank.pockets" to "ICICI",
+        "com.sbi.lotusintouch" to "SBI",
+        "com.sbi.SBIFreedomPlus" to "SBI",
+        "com.sbi.yono" to "SBI",
+        "com.axis.mobile" to "Axis",
+        "com.msf.kbank.mobile" to "Kotak",
+        "com.bankofbaroda.mconnect" to "BoB",
+        "com.fss.pnbpsp" to "PNB",
+        "com.idfcfirstbank.optimus" to "IDFC",
+        "com.yesbank" to "Yes Bank",
+        // adb-posted notifications during a demo
+        "com.android.shell" to "Demo",
+    )
+
+    fun label(packageName: String?): String? = packageName?.let { LABELS[it] }
+}

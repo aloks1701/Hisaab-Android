@@ -34,7 +34,7 @@ class HisaabNotificationListener : NotificationListenerService() {
         if (text.isBlank()) return
 
         val repo = LedgerRepository(HisaabDatabase.get(this).transactions())
-        scope.launch { repo.ingest(text, sbn.postTime) }
+        scope.launch { repo.ingest(text, sbn.postTime, sbn.packageName) }
     }
 
     override fun onDestroy() {
