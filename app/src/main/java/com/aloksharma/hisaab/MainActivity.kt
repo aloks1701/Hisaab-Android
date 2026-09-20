@@ -18,6 +18,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -25,6 +26,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -78,15 +81,41 @@ fun HisaabApp(vm: HisaabViewModel = viewModel()) {
     var darkOverride by remember {
         mutableStateOf(if (prefs.contains("dark")) prefs.getBoolean("dark", false) else null)
     }
+    var masked by remember { mutableStateOf(prefs.getBoolean("masked", false)) }
+    var demo by remember { mutableStateOf(prefs.getBoolean("demo", false)) }
     var tab by remember { mutableStateOf(Tab.LEDGER) }
 
     val dark = darkOverride ?: isSystemInDarkTheme()
     val s = Strings.of(lang)
-    val transactions by vm.transactions.collectAsState()
+    val realTransactions by vm.transactions.collectAsState()
+    // Demo mode swaps what is DISPLAYED. The database is never written to or read differently,
+    // so turning it off gives the real ledger back untouched.
+    val transactions = if (demo) remember { MockData.transactions() } else realTransactions
     val hasAccess = rememberNotificationAccess()
+
+    val toggleMask = {
+        masked = !masked
+        prefs.edit().putBoolean("masked", masked).apply()
+    }
+
+    val toggleDemo = {
+        demo = !demo
+        prefs.edit().putBoolean("demo", demo).apply()
+    }
 
     val openAccessSettings = {
         context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+    }
+
+    // enableEdgeToEdge() draws under the status bar, so its icons have to be told which way to
+    // go: dark icons on the cream paper, light icons on the dark theme. Without this the clock
+    // and battery are invisible in light mode.
+    val view = LocalView.current
+    if (!view.isInEditMode) {
+        SideEffect {
+            val window = (view.context as android.app.Activity).window
+            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !dark
+        }
     }
 
     HisaabTheme(dark = dark) {
@@ -125,6 +154,7 @@ fun HisaabApp(vm: HisaabViewModel = viewModel()) {
                     strings = s,
                     transactions = transactions,
                     dark = dark,
+                    masked = masked,
                     hasAccess = hasAccess,
                     onToggleLang = {
                         lang = if (lang == Lang.HI) Lang.EN else Lang.HI
@@ -135,18 +165,25 @@ fun HisaabApp(vm: HisaabViewModel = viewModel()) {
                         darkOverride = next
                         prefs.edit().putBoolean("dark", next).apply()
                     },
+                    onToggleMask = toggleMask,
                     onGrantAccess = openAccessSettings,
                     onSimulate = { vm.ingestDemo() },
+                    showSimulate = !demo,
                     contentPadding = insets,
                 )
                 Tab.STATS -> StatsScreen(
                     strings = s,
                     transactions = transactions,
+                    masked = masked,
                     contentPadding = insets,
                 )
                 Tab.SETTINGS -> SettingsScreen(
                     strings = s,
                     hasAccess = hasAccess,
+                    masked = masked,
+                    onToggleMask = toggleMask,
+                    demo = demo,
+                    onToggleDemo = toggleDemo,
                     onManageAccess = openAccessSettings,
                     contentPadding = insets,
                 )

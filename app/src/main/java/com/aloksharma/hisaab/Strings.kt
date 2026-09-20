@@ -4,7 +4,15 @@ enum class Lang { HI, EN }
 
 /** Hindi is the default. The register is colloquial, the way people actually talk about money. */
 data class Strings(
+    val title: String,
     val tagline: String,
+    val privateMode: String,
+    val privateModeBody: String,
+    val txnCount: String,
+    val dailyAvg: String,
+    val biggest: String,
+    val demoMode: String,
+    val demoModeBody: String,
     val spent: String,
     val received: String,
     val net: String,
@@ -37,7 +45,15 @@ data class Strings(
         fun of(lang: Lang) = if (lang == Lang.HI) HI else EN
 
         private val HI = Strings(
+            title = "हिसाब",
             tagline = "पेमेंट का हिसाब, अपने आप",
+            privateMode = "नाम और रकम छुपाएँ",
+            privateModeBody = "किसी के सामने ऐप खोलनी पड़े तो नाम और रकम तारों में बदल जाते हैं। डेटा वैसा ही रहता है, बस दिखता नहीं।",
+            txnCount = "लेन-देन",
+            dailyAvg = "रोज़ औसत",
+            biggest = "सबसे बड़ा खर्च",
+            demoMode = "डेमो डेटा",
+            demoModeBody = "दिखाने के लिए बनाया हुआ महीने भर का खर्च। आपका असली हिसाब वैसा ही रहता है, छुआ तक नहीं जाता।",
             spent = "खर्च",
             received = "मिला",
             net = "नेट बदलाव",
@@ -59,7 +75,7 @@ data class Strings(
             accessOff = "बंद है",
             manageAccess = "सेटिंग खोलें",
             privacyTitle = "आपका डेटा कहाँ जाता है",
-            privacyBody = "कहीं नहीं। सब कुछ इसी फ़ोन में रहता है। कोई अकाउंट नहीं, कोई सर्वर नहीं, कोई इंटरनेट नहीं। SMS कभी नहीं पढ़ा जाता।",
+            privacyBody = "कहीं नहीं। इस ऐप के पास इंटरनेट की अनुमति ही नहीं है, इसलिए डेटा फ़ोन से बाहर जा ही नहीं सकता। कोई अकाउंट नहीं, कोई सर्वर नहीं। जो नोटिफिकेशन लेन-देन नहीं है, वह पढ़कर तुरंत छोड़ दी जाती है।",
             noStats = "आँकड़े दिखाने के लिए अभी कोई खर्च नहीं है।",
             thisMonth = "इस महीने",
             topMerchants = "सबसे ज़्यादा कहाँ",
@@ -81,7 +97,15 @@ data class Strings(
         )
 
         private val EN = Strings(
+            title = "Hisaab",
             tagline = "Your payments, logged by themselves",
+            privateMode = "Hide names and amounts",
+            privateModeBody = "Names and amounts turn into asterisks when you have to open the app in front of someone. The data is unchanged, it just stops showing.",
+            txnCount = "Transactions",
+            dailyAvg = "Daily average",
+            biggest = "Biggest expense",
+            demoMode = "Demo data",
+            demoModeBody = "A made-up month of spending, for showing the app. Your real ledger is left exactly as it is.",
             spent = "Spent",
             received = "Received",
             net = "Net change",
@@ -103,7 +127,7 @@ data class Strings(
             accessOff = "Off",
             manageAccess = "Open settings",
             privacyTitle = "Where your data goes",
-            privacyBody = "Nowhere. Everything stays on this phone. No account, no server, no internet. SMS is never read.",
+            privacyBody = "Nowhere. The app holds no internet permission at all, so data cannot leave this phone even in principle. No account, no server. Any notification that is not a transaction is read and dropped, never stored.",
             noStats = "No spending to chart yet.",
             thisMonth = "This month",
             topMerchants = "Biggest merchants",

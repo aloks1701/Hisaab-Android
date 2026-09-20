@@ -13,7 +13,9 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.Switch
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -26,6 +28,10 @@ import androidx.compose.ui.unit.dp
 fun SettingsScreen(
     strings: Strings,
     hasAccess: Boolean,
+    masked: Boolean = false,
+    onToggleMask: () -> Unit = {},
+    demo: Boolean = false,
+    onToggleDemo: () -> Unit = {},
     onManageAccess: () -> Unit,
     contentPadding: PaddingValues = PaddingValues(0.dp),
 ) {
@@ -59,6 +65,50 @@ fun SettingsScreen(
                     )
                 }
                 TextButton(onClick = onManageAccess) { Text(strings.manageAccess) }
+            }
+        }
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            border = BorderStroke(1.dp, HisaabTheme.ledger.line),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(Modifier.weight(1f).padding(end = 12.dp)) {
+                    Text(strings.privateMode, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        strings.privateModeBody,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Switch(checked = masked, onCheckedChange = { onToggleMask() })
+            }
+        }
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            border = BorderStroke(1.dp, HisaabTheme.ledger.line),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(Modifier.weight(1f).padding(end = 12.dp)) {
+                    Text(strings.demoMode, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        strings.demoModeBody,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Switch(checked = demo, onCheckedChange = { onToggleDemo() })
             }
         }
 

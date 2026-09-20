@@ -43,10 +43,11 @@ data class LedgerColors(
     val credit: Color,
     val saffron: Color,
     val line: Color,
+    val isDark: Boolean,
 )
 
 private val LocalLedgerColors = staticCompositionLocalOf {
-    LedgerColors(Debit, Credit, Saffron, Line)
+    LedgerColors(Debit, Credit, Saffron, Line, isDark = false)
 }
 
 object HisaabTheme {
@@ -89,11 +90,49 @@ private val DarkScheme = darkColorScheme(
 @Composable
 fun HisaabTheme(dark: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
     val ledger = if (dark) {
-        LedgerColors(DebitD, CreditD, SaffronD, LineD)
+        LedgerColors(DebitD, CreditD, SaffronD, LineD, isDark = true)
     } else {
-        LedgerColors(Debit, Credit, Saffron, Line)
+        LedgerColors(Debit, Credit, Saffron, Line, isDark = false)
     }
     CompositionLocalProvider(LocalLedgerColors provides ledger) {
         MaterialTheme(colorScheme = if (dark) DarkScheme else LightScheme, content = content)
     }
 }
+
+/**
+ * One colour per category for the breakdown chart. Earthy and desaturated so eleven of them can
+ * sit next to each other on paper stock without turning into a pie-chart rainbow. Dark-mode
+ * variants are lifted, not just the same hues on black, which would read muddy.
+ */
+private val CategoryLight = mapOf(
+    Category.FOOD to Color(0xFFC46A1D),
+    Category.GROCERIES to Color(0xFF1F6F6B),
+    Category.FUEL to Color(0xFF2E3A6B),
+    Category.TRANSPORT to Color(0xFF7A5C9E),
+    Category.BILLS to Color(0xFF8A6A3D),
+    Category.SHOPPING to Color(0xFFA8442F),
+    Category.HEALTH to Color(0xFF3D7A6B),
+    Category.RENT to Color(0xFF4A5568),
+    Category.TRANSFER to Color(0xFF6B7280),
+    Category.INCOME to Color(0xFF2F7D4F),
+    Category.OTHER to Color(0xFF9A9384),
+)
+
+private val CategoryDark = mapOf(
+    Category.FOOD to Color(0xFFD2B15E),
+    Category.GROCERIES to Color(0xFF4FB3AC),
+    Category.FUEL to Color(0xFF7F8FD9),
+    Category.TRANSPORT to Color(0xFFB39BD4),
+    Category.BILLS to Color(0xFFC2A070),
+    Category.SHOPPING to Color(0xFFE07A63),
+    Category.HEALTH to Color(0xFF6FB9A6),
+    Category.RENT to Color(0xFF93A1B5),
+    Category.TRANSFER to Color(0xFFAAB2BF),
+    Category.INCOME to Color(0xFF6FBF8C),
+    Category.OTHER to Color(0xFFBDB5A4),
+)
+
+@Composable
+fun categoryColor(category: Category): Color =
+    (if (HisaabTheme.ledger.isDark) CategoryDark else CategoryLight)[category]
+        ?: MaterialTheme.colorScheme.onSurfaceVariant

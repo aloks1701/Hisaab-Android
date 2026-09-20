@@ -22,7 +22,10 @@ import kotlinx.coroutines.launch
  */
 class HisaabNotificationListener : NotificationListenerService() {
 
-    private companion object { const val TAG = "HisaabCapture" }
+    private companion object {
+        const val TAG = "HisaabCapture"
+        val CURRENCY = Regex("""₹|\bRs\.?\b|\bINR\b""", RegexOption.IGNORE_CASE)
+    }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -39,7 +42,7 @@ class HisaabNotificationListener : NotificationListenerService() {
         // Android 15+ redaction case we need to be able to see. Debug builds only, and only for
         // notifications that are plausibly financial -- a blanket log would put every personal
         // message in logcat. Release builds log nothing.
-        if (BuildConfig.DEBUG && looksFinancial(sbn.packageName, text)) {
+        if (BuildConfig.DEBUG && looksFinancial(text)) {
             Log.d(TAG, "pkg=${sbn.packageName} len=${text.length} text=$text")
         }
 
@@ -48,15 +51,19 @@ class HisaabNotificationListener : NotificationListenerService() {
         val repo = LedgerRepository(HisaabDatabase.get(this).transactions())
         scope.launch {
             val id = repo.ingest(text, sbn.postTime, sbn.packageName)
-            if (BuildConfig.DEBUG && looksFinancial(sbn.packageName, text)) {
+            if (BuildConfig.DEBUG && looksFinancial(text)) {
                 Log.d(TAG, "  -> stored=${id != null}")
             }
         }
     }
 
-    /** A known payment app, or any text mentioning rupees. Keeps the debug log financial-only. */
-    private fun looksFinancial(packageName: String?, text: String): Boolean =
-        SourceApp.label(packageName) != null || text.contains(Regex("""₹|\bRs\.?\b|\bINR\b"""))
+    /**
+     * Requires actual currency text, NOT merely a known package. An earlier version also
+     * accepted any package in the source-app list, which includes WhatsApp (for WhatsApp Pay)
+     * -- so every personal WhatsApp message ended up in the debug log. Notification access is
+     * a broad permission; the logging built on top of it has to be narrow.
+     */
+    private fun looksFinancial(text: String): Boolean = CURRENCY.containsMatchIn(text)
 
     override fun onDestroy() {
         scope.cancel()

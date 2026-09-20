@@ -43,11 +43,14 @@ fun LedgerScreen(
     strings: Strings,
     transactions: List<Transaction>,
     dark: Boolean,
+    masked: Boolean,
     hasAccess: Boolean,
     onToggleLang: () -> Unit,
     onToggleTheme: () -> Unit,
+    onToggleMask: () -> Unit,
     onGrantAccess: () -> Unit,
     onSimulate: () -> Unit,
+    showSimulate: Boolean = true,
     contentPadding: PaddingValues = PaddingValues(0.dp),
 ) {
     val summary = summarize(transactions)
@@ -63,7 +66,7 @@ fun LedgerScreen(
         ),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        item { Masthead(lang, strings, dark, onToggleLang, onToggleTheme) }
+        item { Masthead(lang, strings, dark, masked, onToggleLang, onToggleTheme, onToggleMask) }
 
         if (!hasAccess) {
             item {
@@ -83,9 +86,9 @@ fun LedgerScreen(
 
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-                TotalTile(strings.spent, formatPaise(summary.spentPaise), Modifier.weight(1f))
-                TotalTile(strings.received, formatPaise(summary.receivedPaise), Modifier.weight(1f))
-                TotalTile(strings.net, formatPaise(summary.netPaise), Modifier.weight(1f))
+                TotalTile(strings.spent, money(summary.spentPaise, masked), Modifier.weight(1f))
+                TotalTile(strings.received, money(summary.receivedPaise, masked), Modifier.weight(1f))
+                TotalTile(strings.net, money(summary.netPaise, masked), Modifier.weight(1f))
             }
         }
 
@@ -96,7 +99,7 @@ fun LedgerScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(strings.recent, fontWeight = FontWeight.SemiBold)
-                if (BuildConfig.DEBUG) {
+                if (BuildConfig.DEBUG && showSimulate) {
                     TextButton(onClick = onSimulate) { Text(strings.simulate) }
                 }
             }
@@ -120,7 +123,7 @@ fun LedgerScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                items(rows, key = { it.id }) { txn -> TransactionRow(txn, strings) }
+                items(rows, key = { it.id }) { txn -> TransactionRow(txn, strings, masked) }
             }
         }
     }
@@ -131,8 +134,10 @@ private fun Masthead(
     lang: Lang,
     strings: Strings,
     dark: Boolean,
+    masked: Boolean,
     onToggleLang: () -> Unit,
     onToggleTheme: () -> Unit,
+    onToggleMask: () -> Unit,
 ) {
     Column(Modifier.fillMaxWidth()) {
         // The indigo-to-saffron rule from the web masthead, the one piece of ornament here.
@@ -153,7 +158,7 @@ private fun Masthead(
             // weight(fill = false) lets the tagline wrap in the space left by the toggles
             // rather than forcing the row wider than the screen.
             Column(Modifier.weight(1f, fill = false)) {
-                Text("हिसाब", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                Text(strings.title, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
                 Text(
                     strings.tagline,
                     style = MaterialTheme.typography.bodyMedium,
@@ -162,6 +167,7 @@ private fun Masthead(
             }
             Spacer(Modifier.width(8.dp))
             Row {
+                TextButton(onClick = onToggleMask) { Text(if (masked) "🙈" else "👁") }
                 TextButton(onClick = onToggleLang) { Text(if (lang == Lang.HI) "EN" else "हिं") }
                 TextButton(onClick = onToggleTheme) { Text(if (dark) "☀" else "☾") }
             }
@@ -202,7 +208,7 @@ private fun SourcePill(label: String) {
 }
 
 @Composable
-private fun TransactionRow(txn: Transaction, strings: Strings) {
+private fun TransactionRow(txn: Transaction, strings: Strings, masked: Boolean) {
     val incoming = txn.type == TxnType.CREDIT || txn.type == TxnType.REFUND
     val context = LocalContext.current
     val timeLabel = remember(txn.timestamp) {
@@ -217,7 +223,10 @@ private fun TransactionRow(txn: Transaction, strings: Strings) {
     ) {
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(txn.merchant, fontWeight = FontWeight.Medium)
+                Text(
+                    if (masked) Privacy.maskName(txn.merchant) else txn.merchant,
+                    fontWeight = FontWeight.Medium,
+                )
                 if (source != null) {
                     Spacer(Modifier.width(8.dp))
                     SourcePill(source)
@@ -245,12 +254,16 @@ private fun TransactionRow(txn: Transaction, strings: Strings) {
             }
         }
         Text(
-            (if (incoming) "+" else "−") + formatPaise(txn.amountPaise),
+            (if (incoming) "+" else "−") + money(txn.amountPaise, masked),
             fontWeight = FontWeight.SemiBold,
             color = if (incoming) HisaabTheme.ledger.credit else HisaabTheme.ledger.debit,
         )
     }
 }
+
+/** Formats money, masking the digits when private mode is on. */
+internal fun money(paise: Long, masked: Boolean): String =
+    formatPaise(paise).let { if (masked) Privacy.maskMoney(it) else it }
 
 /** Local-midnight timestamp for a transaction's calendar day, used as its day-header group key. */
 private fun dayKeyOf(timestampMs: Long): Long = Calendar.getInstance().apply {
@@ -284,8 +297,9 @@ private fun LedgerPreview() {
                     sourcePackage = "com.snapwork.hdfc"),
             ),
             dark = false,
+            masked = false,
             hasAccess = true,
-            onToggleLang = {}, onToggleTheme = {}, onGrantAccess = {}, onSimulate = {},
+            onToggleLang = {}, onToggleTheme = {}, onToggleMask = {}, onGrantAccess = {}, onSimulate = {},
         )
     }
 }
