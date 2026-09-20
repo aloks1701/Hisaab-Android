@@ -1,6 +1,7 @@
 package com.aloksharma.hisaab
 
 import android.app.Notification
+import android.util.Log
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import kotlinx.coroutines.CoroutineScope
@@ -21,6 +22,8 @@ import kotlinx.coroutines.launch
  */
 class HisaabNotificationListener : NotificationListenerService() {
 
+    private companion object { const val TAG = "HisaabCapture" }
+
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onNotificationPosted(sbn: StatusBarNotification) {
@@ -31,11 +34,27 @@ class HisaabNotificationListener : NotificationListenerService() {
         val title = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString().orEmpty()
         val body = extras.getCharSequence(Notification.EXTRA_TEXT)?.toString().orEmpty()
         val text = "$title $body".trim()
+
+        // Logged BEFORE the blank check, because a notification arriving empty is exactly the
+        // Android 15+ redaction case we need to be able to see. Debug builds only, and only for
+        // notifications that are plausibly financial -- a blanket log would put every personal
+        // message in logcat. Release builds log nothing.
+        if (BuildConfig.DEBUG && looksFinancial(sbn.packageName, text)) {
+            Log.d(TAG, "pkg=${sbn.packageName} len=${text.length} text=$text")
+        }
+
         if (text.isBlank()) return
 
         val repo = LedgerRepository(HisaabDatabase.get(this).transactions())
-        scope.launch { repo.ingest(text, sbn.postTime, sbn.packageName) }
+        scope.launch {
+            val id = repo.ingest(text, sbn.postTime, sbn.packageName)
+            if (BuildConfig.DEBUG) Log.d(TAG, "  -> stored=${id != null}")
+        }
     }
+
+    /** A known payment app, or any text mentioning rupees. Keeps the debug log financial-only. */
+    private fun looksFinancial(packageName: String?, text: String): Boolean =
+        SourceApp.label(packageName) != null || text.contains(Regex("""₹|\bRs\.?\b|\bINR\b"""))
 
     override fun onDestroy() {
         scope.cancel()
