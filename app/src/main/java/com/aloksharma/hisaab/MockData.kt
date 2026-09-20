@@ -35,6 +35,7 @@ object MockData {
         val sms = "com.google.android.apps.messaging"
 
         return listOf(
+            // This month
             row(0, 2, TxnType.DEBIT, 240, "Zomato", Category.FOOD, gpay),
             row(0, 1, TxnType.DEBIT, 60, "Rapido", Category.TRANSPORT, phonepe),
             row(0, 0, TxnType.DEBIT, 1150, "Blinkit", Category.GROCERIES, gpay),
@@ -50,6 +51,25 @@ object MockData {
             row(5, 2, TxnType.DEBIT, 430, "BigBasket", Category.GROCERIES, gpay),
             row(6, 3, TxnType.DEBIT, 155, "Uber", Category.TRANSPORT, phonepe),
             row(6, 1, TxnType.DEBIT, 300, "R***** S*****", Category.OTHER, sms, needsReview = true),
+
+            // Earlier months, so the year view has a shape rather than a single bar
+            row(34, 6, TxnType.DEBIT, 12000, "Landlord", Category.RENT, sms),
+            row(36, 3, TxnType.DEBIT, 2240, "Swiggy", Category.FOOD, phonepe),
+            row(38, 2, TxnType.DEBIT, 1680, "BigBasket", Category.GROCERIES, gpay),
+            row(40, 4, TxnType.CREDIT, 45000, "SALARY", Category.INCOME, sms),
+            row(42, 2, TxnType.DEBIT, 3400, "Croma", Category.SHOPPING, paytm),
+            row(45, 1, TxnType.DEBIT, 890, "indianoil", Category.FUEL, sms),
+
+            row(64, 6, TxnType.DEBIT, 12000, "Landlord", Category.RENT, sms),
+            row(67, 3, TxnType.DEBIT, 1980, "Zomato", Category.FOOD, gpay),
+            row(70, 4, TxnType.CREDIT, 45000, "SALARY", Category.INCOME, sms),
+            row(72, 2, TxnType.DEBIT, 2600, "Myntra", Category.SHOPPING, paytm),
+            row(75, 1, TxnType.DEBIT, 1450, "Airtel", Category.BILLS, gpay),
+
+            row(95, 6, TxnType.DEBIT, 12000, "Landlord", Category.RENT, sms),
+            row(98, 3, TxnType.DEBIT, 3120, "apollopharmacy", Category.HEALTH, sms),
+            row(101, 4, TxnType.CREDIT, 45000, "SALARY", Category.INCOME, sms),
+            row(104, 2, TxnType.DEBIT, 760, "Uber", Category.TRANSPORT, phonepe),
         )
     }
 }

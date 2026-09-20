@@ -44,6 +44,9 @@ fun LedgerScreen(
     transactions: List<Transaction>,
     dark: Boolean,
     masked: Boolean,
+    period: Period,
+    onPreviousPeriod: () -> Unit,
+    onNextPeriod: () -> Unit,
     hasAccess: Boolean,
     onToggleLang: () -> Unit,
     onToggleTheme: () -> Unit,
@@ -53,9 +56,12 @@ fun LedgerScreen(
     showSimulate: Boolean = true,
     contentPadding: PaddingValues = PaddingValues(0.dp),
 ) {
-    val summary = summarize(transactions)
     val context = LocalContext.current
-    val grouped = remember(transactions) { transactions.groupBy { dayKeyOf(it.timestamp) } }
+    // Everything on this screen is scoped to the selected month, so the totals and the list
+    // can never disagree about which period they describe.
+    val inMonth = remember(transactions, period) { transactions.inPeriod(period) }
+    val summary = remember(inMonth) { summarize(inMonth) }
+    val grouped = remember(inMonth) { inMonth.groupBy { dayKeyOf(it.timestamp) } }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -67,6 +73,8 @@ fun LedgerScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         item { Masthead(lang, strings, dark, masked, onToggleLang, onToggleTheme, onToggleMask) }
+
+        item { PeriodBar(period, strings, onPreviousPeriod, onNextPeriod) }
 
         if (!hasAccess) {
             item {
@@ -105,10 +113,10 @@ fun LedgerScreen(
             }
         }
 
-        if (transactions.isEmpty()) {
+        if (inMonth.isEmpty()) {
             item {
                 Text(
-                    strings.empty,
+                    if (transactions.isEmpty()) strings.empty else strings.noSpendThisMonth,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
@@ -298,6 +306,8 @@ private fun LedgerPreview() {
             ),
             dark = false,
             masked = false,
+            period = Period.current(),
+            onPreviousPeriod = {}, onNextPeriod = {},
             hasAccess = true,
             onToggleLang = {}, onToggleTheme = {}, onToggleMask = {}, onGrantAccess = {}, onSimulate = {},
         )

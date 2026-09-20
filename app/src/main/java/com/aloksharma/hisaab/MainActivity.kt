@@ -84,6 +84,7 @@ fun HisaabApp(vm: HisaabViewModel = viewModel()) {
     var masked by remember { mutableStateOf(prefs.getBoolean("masked", false)) }
     var demo by remember { mutableStateOf(prefs.getBoolean("demo", false)) }
     var tab by remember { mutableStateOf(Tab.LEDGER) }
+    var period by remember { mutableStateOf(Period.current()) }
 
     val dark = darkOverride ?: isSystemInDarkTheme()
     val s = Strings.of(lang)
@@ -155,6 +156,9 @@ fun HisaabApp(vm: HisaabViewModel = viewModel()) {
                     transactions = transactions,
                     dark = dark,
                     masked = masked,
+                    period = period,
+                    onPreviousPeriod = { period = period.previous() },
+                    onNextPeriod = { period = period.next() },
                     hasAccess = hasAccess,
                     onToggleLang = {
                         lang = if (lang == Lang.HI) Lang.EN else Lang.HI
@@ -175,6 +179,9 @@ fun HisaabApp(vm: HisaabViewModel = viewModel()) {
                     strings = s,
                     transactions = transactions,
                     masked = masked,
+                    period = period,
+                    onPreviousPeriod = { period = period.previous() },
+                    onNextPeriod = { period = period.next() },
                     contentPadding = insets,
                 )
                 Tab.SETTINGS -> SettingsScreen(
