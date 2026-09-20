@@ -208,7 +208,7 @@ private fun TransactionRow(txn: Transaction, strings: Strings) {
     val timeLabel = remember(txn.timestamp) {
         DateUtils.formatDateTime(context, txn.timestamp, DateUtils.FORMAT_SHOW_TIME)
     }
-    val source = remember(txn.sourcePackage) { SourceApp.label(txn.sourcePackage) }
+    val source = remember(txn.id) { SourceApp.label(txn.sourcePackage, txn.sourceText) }
 
     Row(
         modifier = Modifier.fillMaxWidth(),

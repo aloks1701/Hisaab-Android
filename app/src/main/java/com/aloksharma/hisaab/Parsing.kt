@@ -74,6 +74,8 @@ object NotificationParser {
     /** A bare 6+ digit trailing token is a UPI/txn reference glued on with no keyword, not part
      * of the merchant name ("to Swiggy 430281999456"). Real merchant names don't end this way;
      * short trailing numbers (store/branch numbers) are left alone. */
+    private val WHITESPACE_RUN = Regex("\\s+")
+
     private val TRAILING_REF_NUMBER = Regex("""\s+\d{6,}$""")
 
     fun parse(text: String, timestamp: Long = System.currentTimeMillis()): ParsedTxn? {
@@ -123,6 +125,7 @@ object NotificationParser {
 
     private fun cleanMerchant(raw: String): String = raw
         .replace(MERCHANT_TAIL, "")
+        .replace(WHITESPACE_RUN, " ")   // bank SMS pads names: "EXAMPLE  PAYEE"
         .substringBefore('\n')
         .substringBefore(',')            // ", avl bal Rs.4,200" / ", balance Rs.4,200" etc.
         .trim()
@@ -189,6 +192,10 @@ object SourceApp {
         // Bank apps
         "com.snapwork.hdfc" to "HDFC",
         "com.hdfc.mobilebanking" to "HDFC",
+        // Found on a real device: HDFC ships several separate apps.
+        "com.hdfcbank.android.now" to "HDFC",
+        "com.enstage.wibmo.hdfc" to "HDFC",
+        "com.hdfcbank.payzapp" to "PayZapp",
         "com.csam.icici.bank.imobile" to "ICICI",
         "com.icicibank.pockets" to "ICICI",
         "com.sbi.lotusintouch" to "SBI",
@@ -204,5 +211,42 @@ object SourceApp {
         "com.android.shell" to "Demo",
     )
 
-    fun label(packageName: String?): String? = packageName?.let { LABELS[it] }
+    /**
+     * SMS apps. In practice this is the main capture path in India: the bank texts you, the
+     * SMS app posts a notification, and we read that notification. We never hold the SMS
+     * permission - the notification is all we ever see.
+     */
+    private val SMS_APPS = setOf(
+        "com.google.android.apps.messaging",
+        "com.samsung.android.messaging",
+        "com.android.messaging",
+    )
+
+    /**
+     * Indian bank SMS sender IDs, e.g. "VM-HDFCBK-T". The middle segment names the sender, so
+     * a row captured via the SMS app can still show which bank it came from.
+     */
+    private val SENDER_IDS: Map<String, String> = mapOf(
+        "HDFCBK" to "HDFC", "ICICIB" to "ICICI", "ICICIT" to "ICICI",
+        "SBIINB" to "SBI", "SBIUPI" to "SBI", "ATMSBI" to "SBI", "SBICRD" to "SBI",
+        "AXISBK" to "Axis", "KOTAKB" to "Kotak", "PNBSMS" to "PNB", "CANBNK" to "Canara",
+        "UNIONB" to "Union", "IDFCFB" to "IDFC", "YESBNK" to "Yes Bank",
+        "INDUSB" to "IndusInd", "BOIIND" to "BOI", "PYTMBK" to "Paytm Bank",
+        "AMZNIN" to "Amazon Pay", "PHONPE" to "PhonePe",
+    )
+
+    private val SENDER_PREFIX = Regex("^[A-Z]{2}-([A-Z]{6})(?:-[A-Z])?\\b")
+
+    /**
+     * The pill label for a row. For an SMS app the package only says "Messages", so the bank is
+     * recovered from the sender ID instead. Falls back to a generic label rather than a wrong
+     * one - a mislabelled bank is worse than a vague one.
+     */
+    fun label(packageName: String?, sourceText: String? = null): String? {
+        if (packageName in SMS_APPS) {
+            val id = sourceText?.let { SENDER_PREFIX.find(it.trimStart())?.groupValues?.get(1) }
+            return id?.let { SENDER_IDS[it] } ?: "SMS"
+        }
+        return packageName?.let { LABELS[it] }
+    }
 }

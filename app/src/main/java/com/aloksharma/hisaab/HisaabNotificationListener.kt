@@ -48,7 +48,9 @@ class HisaabNotificationListener : NotificationListenerService() {
         val repo = LedgerRepository(HisaabDatabase.get(this).transactions())
         scope.launch {
             val id = repo.ingest(text, sbn.postTime, sbn.packageName)
-            if (BuildConfig.DEBUG) Log.d(TAG, "  -> stored=${id != null}")
+            if (BuildConfig.DEBUG && looksFinancial(sbn.packageName, text)) {
+                Log.d(TAG, "  -> stored=${id != null}")
+            }
         }
     }
 
