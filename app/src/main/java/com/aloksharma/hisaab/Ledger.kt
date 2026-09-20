@@ -1,0 +1,159 @@
+package com.aloksharma.hisaab
+
+import android.content.Context
+import androidx.room.Dao
+import androidx.room.Database
+import androidx.room.Entity
+import androidx.room.Insert
+import androidx.room.PrimaryKey
+import androidx.room.Query
+import androidx.room.Room
+import androidx.room.RoomDatabase
+import androidx.room.TypeConverter
+import androidx.room.TypeConverters
+import kotlinx.coroutines.flow.Flow
+
+enum class Category { FOOD, GROCERIES, FUEL, TRANSPORT, BILLS, SHOPPING, HEALTH, RENT, TRANSFER, INCOME, OTHER }
+
+enum class TxnType { DEBIT, CREDIT, REFUND, UNKNOWN }
+
+/** Money is integer paise everywhere. Never Float/Double — rounding errors compound in a ledger. */
+@Entity(tableName = "transactions")
+data class Transaction(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val type: TxnType,
+    val amountPaise: Long,
+    val merchant: String,
+    val category: Category,
+    val sourceText: String,
+    val timestamp: Long,
+    val needsReview: Boolean = false,
+)
+
+class Converters {
+    @TypeConverter fun toType(v: String) = TxnType.valueOf(v)
+    @TypeConverter fun fromType(v: TxnType) = v.name
+    @TypeConverter fun toCategory(v: String) = Category.valueOf(v)
+    @TypeConverter fun fromCategory(v: Category) = v.name
+}
+
+@Dao
+interface TransactionDao {
+    @Insert suspend fun insert(txn: Transaction): Long
+
+    @Query("SELECT * FROM transactions ORDER BY timestamp DESC")
+    fun observeAll(): Flow<List<Transaction>>
+
+    /** Dedup lookup: same amount + merchant inside a short window. */
+    @Query(
+        "SELECT COUNT(*) FROM transactions WHERE amountPaise = :amountPaise " +
+            "AND merchant = :merchant AND timestamp BETWEEN :since AND :until"
+    )
+    suspend fun countSimilar(amountPaise: Long, merchant: String, since: Long, until: Long): Int
+}
+
+@Database(entities = [Transaction::class], version = 1, exportSchema = false)
+@TypeConverters(Converters::class)
+abstract class HisaabDatabase : RoomDatabase() {
+    abstract fun transactions(): TransactionDao
+
+    companion object {
+        @Volatile private var instance: HisaabDatabase? = null
+
+        fun get(context: Context): HisaabDatabase = instance ?: synchronized(this) {
+            instance ?: Room.databaseBuilder(
+                context.applicationContext, HisaabDatabase::class.java, "hisaab.db"
+            ).build().also { instance = it }
+        }
+    }
+}
+
+/** Duplicate window: a bank and a UPI app often both notify the same payment seconds apart. */
+const val DEDUP_WINDOW_MS = 2 * 60 * 1000L
+
+class LedgerRepository(private val dao: TransactionDao) {
+
+    fun observeAll(): Flow<List<Transaction>> = dao.observeAll()
+
+    /**
+     * The single entry point for raw notification text: parse, categorize, dedupe, store.
+     * Both the live listener and the debug simulator go through here so the demo exercises
+     * the real pipeline. Returns null when the text isn't a payment or is a duplicate.
+     */
+    suspend fun ingest(text: String, timestamp: Long = System.currentTimeMillis()): Long? {
+        val parsed = NotificationParser.parse(text) ?: return null
+        return record(
+            Transaction(
+                type = parsed.type,
+                amountPaise = parsed.amountPaise,
+                merchant = parsed.merchant,
+                category = parsed.category,
+                sourceText = text,
+                timestamp = timestamp,
+                needsReview = parsed.needsReview,
+            )
+        )
+    }
+
+    /** Returns the new row id, or null when this looks like a duplicate of one already stored. */
+    suspend fun record(txn: Transaction): Long? {
+        val dupes = dao.countSimilar(
+            txn.amountPaise, txn.merchant,
+            txn.timestamp - DEDUP_WINDOW_MS, txn.timestamp + DEDUP_WINDOW_MS,
+        )
+        return if (dupes > 0) null else dao.insert(txn)
+    }
+}
+
+data class Summary(
+    val spentPaise: Long,
+    val receivedPaise: Long,
+    val byCategory: Map<Category, Long>,
+) {
+    val netPaise: Long get() = receivedPaise - spentPaise
+}
+
+/**
+ * Aggregates in Kotlin rather than SQL.
+ * ponytail: O(n) over the whole table on every emission — fine for a personal ledger,
+ * move to SQL SUM/GROUP BY queries if this ever holds more than a few thousand rows.
+ */
+fun summarize(txns: List<Transaction>): Summary {
+    var spent = 0L
+    var received = 0L
+    val byCategory = mutableMapOf<Category, Long>()
+    for (t in txns) {
+        when (t.type) {
+            TxnType.DEBIT -> {
+                spent += t.amountPaise
+                byCategory[t.category] = (byCategory[t.category] ?: 0L) + t.amountPaise
+            }
+            TxnType.CREDIT, TxnType.REFUND -> received += t.amountPaise
+            TxnType.UNKNOWN -> Unit
+        }
+    }
+    return Summary(spent, received, byCategory)
+}
+
+/** "₹1,589" — Indian digit grouping, paise shown only when non-zero. */
+fun formatPaise(paise: Long): String {
+    val negative = paise < 0
+    val abs = if (negative) -paise else paise
+    val rupees = abs / 100
+    val remainder = (abs % 100).toInt()
+    val digits = rupees.toString()
+    val grouped = if (digits.length <= 3) digits else {
+        val last3 = digits.takeLast(3)
+        val rest = digits.dropLast(3)
+        val chunks = mutableListOf<String>()
+        var i = rest.length
+        while (i > 0) {
+            val start = maxOf(0, i - 2)
+            chunks.add(0, rest.substring(start, i))
+            i = start
+        }
+        chunks.joinToString(",") + "," + last3
+    }
+    val tail = if (remainder == 0) "" else ".%02d".format(remainder)
+    return (if (negative) "-₹" else "₹") + grouped + tail
+}
