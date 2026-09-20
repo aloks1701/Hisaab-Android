@@ -1,0 +1,663 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Hisaab turns UPI payment notifications into a Hindi-first expense ledger, entirely on-device.">
+<meta property="og:title" content="Hisaab">
+<meta property="og:description" content="The ledger writes itself. An Android app that reads UPI payment notifications and keeps the account, with nothing leaving the phone.">
+<meta property="og:type" content="website">
+<style>
+  html { color-scheme: dark; }
+  body { margin: 0; }
+  img { max-width: 100%; }
+  [hidden] { display: none !important; }
+</style>
+<title>Hisaab</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tiro+Devanagari+Hindi:ital@0;1&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Sans+Devanagari:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+</head>
+<body>
+<style>
+  /* Committed single visual world: ink and paper, after the bahi khata — the cloth-bound
+     Indian ledger book. Indigo ink ground, one warm paper panel, a vermilion margin rule.
+     Every colour is painted explicitly so the page holds on any host ground. */
+  :root {
+    --ink:        #0E1119;
+    --ink-2:      #161B28;
+    --ink-3:      #1E2434;
+    --rule:       #2A3145;
+    --paper:      #F4EFE3;
+    --paper-2:    #E9E2D2;
+    --paper-ink:  #1C1913;
+    --paper-mute: #6B6355;
+    --vermilion:  #D2553B;
+    --indigo:     #7C8BE0;
+    --jade:       #3FA08C;
+    --saffron:    #D9A441;
+    --fg:         #EDE9DF;
+    --fg-mute:    #949AB0;
+
+    --display: "Tiro Devanagari Hindi", Georgia, serif;
+    --sans: "IBM Plex Sans", "IBM Plex Sans Devanagari", system-ui, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+
+    --measure: 62ch;
+    --maxw: 1080px;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ink);
+    color: var(--fg);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: var(--maxw);
+    margin: 0 auto;
+    padding-inline: 20px;
+  }
+
+  a { color: var(--indigo); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+  a:focus-visible, button:focus-visible {
+    outline: 2px solid var(--saffron);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+
+  h1, h2, h3 { text-wrap: balance; margin: 0; }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--fg-mute);
+  }
+
+  /* ---------- masthead ---------- */
+  .rule-grad {
+    height: 3px;
+    background: linear-gradient(90deg, var(--indigo), var(--saffron) 60%, var(--vermilion));
+  }
+
+  header.top {
+    padding-block: 22px 0;
+  }
+  .top-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .wordmark {
+    font-family: var(--display);
+    font-size: 30px;
+    line-height: 1;
+    color: var(--fg);
+  }
+  .top-links {
+    display: flex;
+    gap: 18px;
+    font-size: 14px;
+  }
+
+  /* ---------- hero ---------- */
+  .hero {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 40px;
+    padding-block: 56px 64px;
+    align-items: start;
+  }
+  @media (min-width: 900px) {
+    .hero { grid-template-columns: 1fr 380px; gap: 56px; }
+  }
+
+  .hero h1 {
+    font-family: var(--display);
+    font-size: clamp(34px, 6vw, 56px);
+    line-height: 1.12;
+    letter-spacing: -0.01em;
+    margin-bottom: 20px;
+  }
+  .hero h1 .hi { display: block; color: var(--saffron); font-size: 0.62em; margin-bottom: 8px; }
+
+  .lede {
+    font-size: clamp(16px, 2vw, 19px);
+    color: var(--fg);
+    max-width: var(--measure);
+    margin: 0 0 26px;
+  }
+  .lede strong { color: var(--saffron); font-weight: 600; }
+
+  .facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 28px;
+  }
+  .fact {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--fg-mute);
+    border: 1px solid var(--rule);
+    border-radius: 999px;
+    padding: 5px 11px;
+  }
+  .fact b { color: var(--fg); font-weight: 500; }
+
+  .cta-row { display: flex; flex-wrap: wrap; gap: 12px; }
+  .btn {
+    display: inline-block;
+    font-family: var(--sans);
+    font-size: 14px;
+    font-weight: 600;
+    padding: 11px 18px;
+    border-radius: 3px;
+    text-decoration: none;
+  }
+  .btn-primary { background: var(--saffron); color: #221A06; }
+  .btn-ghost { border: 1px solid var(--rule); color: var(--fg); }
+
+  /* ---------- the self-writing ledger ---------- */
+  .stage { position: relative; }
+
+  .notif {
+    background: var(--ink-3);
+    border: 1px solid var(--rule);
+    border-radius: 12px;
+    padding: 11px 13px;
+    display: flex;
+    gap: 11px;
+    align-items: flex-start;
+    margin-bottom: 14px;
+    opacity: 0;
+    transform: translateY(-8px);
+    transition: opacity .35s ease, transform .35s ease;
+  }
+  .notif.show { opacity: 1; transform: none; }
+  .notif-app {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: .06em;
+    color: var(--ink);
+    background: var(--fg-mute);
+    border-radius: 4px;
+    padding: 3px 6px;
+    flex: none;
+    margin-top: 2px;
+  }
+  .notif-text { font-size: 13px; color: var(--fg); line-height: 1.45; }
+
+  .ledger {
+    background: var(--paper);
+    color: var(--paper-ink);
+    border-radius: 6px;
+    padding: 18px 18px 8px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 1px 0 var(--paper-2) inset;
+  }
+  /* the bahi khata's red margin rule */
+  .ledger::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 2px;
+    background: var(--vermilion);
+    opacity: .55;
+  }
+
+  .ledger-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    border-bottom: 1px solid var(--paper-2);
+    padding-bottom: 10px;
+    margin-bottom: 4px;
+  }
+  .ledger-title { font-family: var(--display); font-size: 19px; }
+  .ledger-total {
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--paper-ink);
+  }
+  .ledger-total-label {
+    display: block;
+    font-family: var(--sans);
+    font-size: 10px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--paper-mute);
+    text-align: right;
+    font-weight: 500;
+  }
+
+  .rows { list-style: none; margin: 0; padding: 0; min-height: 232px; }
+  .row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--paper-2);
+    animation: write-in .4s ease both;
+  }
+  @keyframes write-in {
+    from { opacity: 0; transform: translateX(-6px); }
+    to   { opacity: 1; transform: none; }
+  }
+  .row-main { min-width: 0; }
+  .row-merchant {
+    font-weight: 600;
+    font-size: 14.5px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    flex-wrap: wrap;
+  }
+  .pill {
+    font-family: var(--mono);
+    font-size: 9.5px;
+    letter-spacing: .04em;
+    border: 1px solid var(--paper-2);
+    border-radius: 999px;
+    padding: 1px 6px;
+    color: var(--paper-mute);
+    font-weight: 400;
+  }
+  .row-cat { font-size: 12px; color: var(--paper-mute); }
+  .row-amt {
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 14.5px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .out { color: var(--vermilion); }
+  .in  { color: var(--jade); }
+
+  .stage-note {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--fg-mute);
+    text-align: center;
+    margin-top: 12px;
+  }
+
+  /* ---------- sections ---------- */
+  section { padding-block: 56px; border-top: 1px solid var(--rule); }
+  .sec-head { margin-bottom: 28px; }
+  .sec-head h2 {
+    font-family: var(--display);
+    font-size: clamp(24px, 3.4vw, 32px);
+    margin-top: 6px;
+  }
+  .sec-head p { color: var(--fg-mute); max-width: var(--measure); margin: 10px 0 0; }
+
+  /* pipeline: a real sequence, so it is numbered */
+  .pipe { display: grid; gap: 1px; background: var(--rule); border: 1px solid var(--rule); border-radius: 4px; overflow: hidden; }
+  @media (min-width: 760px) { .pipe { grid-template-columns: repeat(5, 1fr); } }
+  .step { background: var(--ink-2); padding: 18px 16px; }
+  .step-n {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--saffron);
+    display: block;
+    margin-bottom: 8px;
+  }
+  .step h3 { font-size: 14.5px; font-weight: 600; margin-bottom: 6px; }
+  .step p { margin: 0; font-size: 13px; color: var(--fg-mute); line-height: 1.5; }
+
+  /* privacy evidence */
+  .evidence {
+    background: var(--ink-2);
+    border: 1px solid var(--rule);
+    border-left: 3px solid var(--jade);
+    border-radius: 4px;
+    padding: 20px;
+  }
+  .evidence h3 { font-size: 15px; margin-bottom: 10px; }
+  .evidence p { margin: 0 0 14px; color: var(--fg-mute); font-size: 14.5px; max-width: var(--measure); }
+  pre {
+    font-family: var(--mono);
+    font-size: 12px;
+    background: var(--ink);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    padding: 13px 14px;
+    margin: 0;
+    overflow-x: auto;
+    color: var(--fg);
+    line-height: 1.7;
+  }
+  pre .c { color: var(--fg-mute); }
+  pre .ok { color: var(--jade); }
+
+  /* shots */
+  .shots { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); }
+  .shot { margin: 0; }
+  .shot img {
+    width: 100%;
+    max-width: 100%;
+    display: block;
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    background: var(--ink-2);
+  }
+  .shot figcaption {
+    font-size: 12.5px;
+    color: var(--fg-mute);
+    margin-top: 9px;
+    line-height: 1.45;
+  }
+  .shot b { color: var(--fg); font-weight: 600; }
+
+  /* built / next */
+  .cols { display: grid; gap: 28px; }
+  @media (min-width: 760px) { .cols { grid-template-columns: 1fr 1fr; gap: 44px; } }
+  .list { list-style: none; margin: 0; padding: 0; }
+  .list li {
+    padding: 9px 0 9px 22px;
+    border-bottom: 1px solid var(--rule);
+    position: relative;
+    font-size: 14.5px;
+  }
+  .list li::before {
+    content: "";
+    position: absolute;
+    left: 2px;
+    top: 17px;
+    width: 8px;
+    height: 2px;
+    background: var(--jade);
+  }
+  .list.next li::before { background: var(--fg-mute); }
+  .list small { display: block; color: var(--fg-mute); font-size: 12.5px; margin-top: 2px; }
+
+  footer {
+    border-top: 1px solid var(--rule);
+    padding-block: 32px 44px;
+    color: var(--fg-mute);
+    font-size: 13.5px;
+  }
+  .foot-row { display: flex; flex-wrap: wrap; gap: 14px 24px; justify-content: space-between; align-items: baseline; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .notif, .row { transition: none; animation: none; }
+  }
+</style>
+
+<div class="rule-grad"></div>
+
+<div class="wrap">
+  <header class="top">
+    <div class="top-row">
+      <div class="wordmark">हिसाब</div>
+      <nav class="top-links">
+        <a href="https://github.com/aloks1701/Hisaab-Android">Source</a>
+        <a href="https://github.com/aloks1701/Hisaab-Android/releases/tag/v1.0">Release v1.0</a>
+      </nav>
+    </div>
+  </header>
+
+  <div class="hero">
+    <div>
+      <h1><span class="hi">पेमेंट का हिसाब, अपने आप</span>The ledger writes itself.</h1>
+      <p class="lede">
+        You already pay with GPay, PhonePe and your bank app. Every payment fires a
+        notification and then it is gone. Hisaab reads those notifications and keeps the
+        account — <strong>no typing, no bank login, nothing leaves the phone</strong>.
+      </p>
+      <div class="facts">
+        <span class="fact"><b>Android</b> · Kotlin + Compose</span>
+        <span class="fact"><b>0</b> permissions in the manifest</span>
+        <span class="fact"><b>66</b> tests passing</span>
+        <span class="fact"><b>Hindi</b>-first, English toggle</span>
+      </div>
+      <div class="cta-row">
+        <a class="btn btn-primary" href="https://github.com/aloks1701/Hisaab-Android/releases/tag/v1.0">Download v1.0</a>
+        <a class="btn btn-ghost" href="https://github.com/aloks1701/Hisaab-Android">Read the source</a>
+      </div>
+    </div>
+
+    <div class="stage">
+      <div class="notif" id="notif">
+        <span class="notif-app" id="notifApp">GPay</span>
+        <span class="notif-text" id="notifText">You paid ₹240 to Zomato</span>
+      </div>
+
+      <div class="ledger">
+        <div class="ledger-head">
+          <span class="ledger-title">आज</span>
+          <span>
+            <span class="ledger-total-label">खर्च</span>
+            <span class="ledger-total" id="total">₹0</span>
+          </span>
+        </div>
+        <ul class="rows" id="rows"></ul>
+      </div>
+      <p class="stage-note">live — nothing typed</p>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+  <section>
+    <div class="sec-head">
+      <span class="eyebrow">What happens when you pay</span>
+      <h2>Five steps, none of them yours</h2>
+      <p>The payment already produced a notification. Everything after that is the app's job, and all of it runs on the device.</p>
+    </div>
+    <div class="pipe">
+      <div class="step">
+        <span class="step-n">01</span>
+        <h3>Listen</h3>
+        <p>A notification listener sees the payment arrive from a UPI app, a bank app, or the bank's SMS.</p>
+      </div>
+      <div class="step">
+        <span class="step-n">02</span>
+        <h3>Parse</h3>
+        <p>Amount, direction and counterparty are pulled out. Anything without all three is dropped.</p>
+      </div>
+      <div class="step">
+        <span class="step-n">03</span>
+        <h3>Categorise</h3>
+        <p>Zomato becomes खाना, indianoil becomes पेट्रोल. Weak guesses are flagged, not hidden.</p>
+      </div>
+      <div class="step">
+        <span class="step-n">04</span>
+        <h3>De-duplicate</h3>
+        <p>Your bank and your UPI app both announce the same payment. It is recorded once.</p>
+      </div>
+      <div class="step">
+        <span class="step-n">05</span>
+        <h3>Write</h3>
+        <p>The row lands in the ledger with the day's running total, in integer paise. Never floating point.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <span class="eyebrow">The privacy claim, checkable</span>
+      <h2>It cannot phone home</h2>
+    </div>
+    <div class="evidence">
+      <h3>Every permission Hisaab declares, merged across all its libraries</h3>
+      <p>
+        There is no <code>INTERNET</code> permission. Not "we promise not to" — the operating
+        system will not let the app open a socket. Unzip the APK and check. Notification access
+        is the one thing it asks for, granted from a system settings screen and revocable there.
+      </p>
+      <pre><span class="c">$ aapt dump permissions app-release.apk</span>
+uses-permission: com.aloksharma.hisaab.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION  <span class="c">← AndroidX internal</span>
+
+<span class="ok">no android.permission.INTERNET
+no android.permission.READ_SMS
+no android.permission.RECEIVE_SMS</span></pre>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <span class="eyebrow">Running on a Galaxy S22 Ultra, Android 16</span>
+      <h2>Not mockups</h2>
+      <p>Demo data is switched on in these captures so no real transactions are shown. A real ₹1 UPI payment was captured, parsed and filed on this device.</p>
+    </div>
+    <div class="shots">
+      <figure class="shot">
+        <img src="shot-ledger.png" alt="The Hisaab ledger, showing transactions grouped by day with source pills and per-day totals" width="720" height="1544">
+        <figcaption><b>Ledger.</b> Source pill per row, day totals in the margin, money set in tabular figures so the column lines up.</figcaption>
+      </figure>
+      <figure class="shot">
+        <img src="shot-month.png" alt="The stats screen for a single month, with a category donut and breakdown bars" width="720" height="1544">
+        <figcaption><b>Month.</b> Category donut with the total in the hole, and the same colours carried into the bars beneath.</figcaption>
+      </figure>
+      <figure class="shot">
+        <img src="shot-year.png" alt="The stats screen in year scope, with twelve monthly bars and a year total" width="720" height="1544">
+        <figcaption><b>Year.</b> Twelve months, empty ones keeping their slot so the gaps stay visible.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section>
+    <div>
+      <div>
+        <div class="sec-head">
+          <span class="eyebrow">Built</span>
+          <h2>In the app today</h2>
+        </div>
+        <ul class="list">
+          <li>Live capture from notifications
+            <small>Proven against a real bank payment on a real phone</small></li>
+          <li>Hindi-first, with an English toggle
+            <small>Colloquial register: मिला, not आय</small></li>
+          <li>Source pills
+            <small>GPay, PhonePe, Paytm, or the bank recovered from its SMS sender ID</small></li>
+          <li>Month and year scopes
+            <small>Ledger and stats always agree on the period</small></li>
+          <li>Private mode
+            <small>Masks names and amounts for opening the app in public</small></li>
+          <li>Light and dark, and an on-device database
+            <small>Room, integer paise throughout</small></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="foot-row">
+      <span>हिसाब · built on Build Day, Bhopal, 20 September 2026</span>
+      <span>
+        <a href="https://github.com/aloks1701/Hisaab-Android">GitHub</a> ·
+        <a href="https://github.com/aloks1701/Hisaab-Android/releases/tag/v1.0">v1.0</a>
+      </span>
+    </div>
+  </footer>
+</div>
+
+<script>
+  (function () {
+    // The hero's thesis, animated: notifications arrive, rows write themselves, the total moves.
+    // Amounts are integer paise here too, the same invariant the app holds.
+    var FEED = [
+      { app: "GPay",    text: "You paid ₹240 to Zomato",                     m: "Zomato",     cat: "खाना",             p: 24000,  out: true },
+      { app: "PhonePe", text: "Payment of ₹60 to Rapido successful",          m: "Rapido",     cat: "सफ़र",             p: 6000,   out: true },
+      { app: "HDFC",    text: "Sent Rs.1,150.00 to BLINKIT on 20/09/26",           m: "Blinkit",    cat: "राशन",             p: 115000, out: true },
+      { app: "SBI",     text: "Rs 320.00 debited to VPA indianoil@ybl",            m: "indianoil",  cat: "पेट्रोल", p: 32000, out: true },
+      { app: "HDFC",    text: "Rs.2,500.00 credited by VPA a.kumar@okhdfc",        m: "A***** K*****", cat: "इनकम",          p: 250000, out: false }
+    ];
+
+    var rowsEl = document.getElementById("rows");
+    var totalEl = document.getElementById("total");
+    var notifEl = document.getElementById("notif");
+    var notifApp = document.getElementById("notifApp");
+    var notifText = document.getElementById("notifText");
+
+    var reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    function rupees(paise) {
+      var r = Math.round(paise / 100);
+      var s = String(r), out = "", last3 = s.slice(-3), rest = s.slice(0, -3);
+      if (rest) {
+        var chunks = [];
+        while (rest.length > 2) { chunks.unshift(rest.slice(-2)); rest = rest.slice(0, -2); }
+        if (rest) chunks.unshift(rest);
+        out = chunks.join(",") + "," + last3;
+      } else { out = last3; }
+      return "₹" + out;
+    }
+
+    function addRow(item) {
+      var li = document.createElement("li");
+      li.className = "row";
+      var main = document.createElement("div");
+      main.className = "row-main";
+      var mer = document.createElement("div");
+      mer.className = "row-merchant";
+      mer.appendChild(document.createTextNode(item.m));
+      var pill = document.createElement("span");
+      pill.className = "pill";
+      pill.textContent = item.app;
+      mer.appendChild(pill);
+      var cat = document.createElement("div");
+      cat.className = "row-cat";
+      cat.textContent = item.cat;
+      main.appendChild(mer);
+      main.appendChild(cat);
+      var amt = document.createElement("div");
+      amt.className = "row-amt " + (item.out ? "out" : "in");
+      amt.textContent = (item.out ? "−" : "+") + rupees(item.p);
+      li.appendChild(main);
+      li.appendChild(amt);
+      rowsEl.insertBefore(li, rowsEl.firstChild);
+      while (rowsEl.children.length > 4) rowsEl.removeChild(rowsEl.lastChild);
+    }
+
+    var spent = 0, i = 0;
+
+    function tick() {
+      var item = FEED[i % FEED.length];
+      i++;
+
+      if (i % (FEED.length + 1) === 0) {           // breathe, then start the day over
+        rowsEl.innerHTML = "";
+        spent = 0;
+        totalEl.textContent = rupees(0);
+        setTimeout(tick, 900);
+        return;
+      }
+
+      notifApp.textContent = item.app;
+      notifText.textContent = item.text;
+      notifEl.classList.add("show");
+
+      setTimeout(function () {
+        addRow(item);
+        if (item.out) { spent += item.p; totalEl.textContent = rupees(spent); }
+        notifEl.classList.remove("show");
+        setTimeout(tick, 1500);
+      }, reduced ? 200 : 1100);
+    }
+
+    // Render the first state immediately so the page never sits empty at rest.
+    addRow(FEED[0]);
+    spent = FEED[0].p;
+    totalEl.textContent = rupees(spent);
+    i = 1;
+    setTimeout(tick, reduced ? 1200 : 2200);
+  })();
+</script>
+
+</body>
+</html>
