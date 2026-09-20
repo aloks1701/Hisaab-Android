@@ -104,7 +104,10 @@ class LedgerRepository(private val dao: TransactionDao) {
                 amountPaise = parsed.amountPaise,
                 merchant = parsed.merchant,
                 category = parsed.category,
-                sourceText = text,
+                // Only the bank's sender id is kept, never the message. The raw text holds the
+                // payee's name, the account's last four digits and a reference number, and the
+                // only thing ever read back out of it is which bank sent it.
+                sourceText = SourceApp.senderId(text).orEmpty(),
                 timestamp = timestamp,
                 needsReview = parsed.needsReview,
                 sourcePackage = sourcePackage,

@@ -242,6 +242,10 @@ object SourceApp {
      * recovered from the sender ID instead. Falls back to a generic label rather than a wrong
      * one - a mislabelled bank is worse than a vague one.
      */
+    /** "VM-HDFCBK-T Sent Rs.1.00" -> "VM-HDFCBK-T". Null when the text carries no sender id. */
+    fun senderId(text: String): String? =
+        SENDER_PREFIX.find(text.trimStart())?.value
+
     fun label(packageName: String?, sourceText: String? = null): String? {
         if (packageName in SMS_APPS) {
             val id = sourceText?.let { SENDER_PREFIX.find(it.trimStart())?.groupValues?.get(1) }

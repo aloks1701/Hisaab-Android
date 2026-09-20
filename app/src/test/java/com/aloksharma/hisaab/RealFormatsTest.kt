@@ -1,6 +1,7 @@
 package com.aloksharma.hisaab
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -65,5 +66,36 @@ class RealFormatsTest {
     fun `a payment app package still labels from the package, not the text`() {
         assertEquals("PhonePe", SourceApp.label("com.phonepe.app", "Payment of Rs.240 to Rapido successful"))
         assertEquals(null, SourceApp.label("com.unknown.app", "Rs.240 paid to Rapido"))
+    }
+}
+
+/** The ledger must not become a copy of the user's messages. */
+class StoredTextTest {
+
+    private val bankSms = """
+        VM-HDFCBK-T Sent Rs.1.00
+        From HDFC Bank A/C *1234
+        To EXAMPLE PAYEE
+        Ref 100000000000
+    """.trimIndent()
+
+    @Test
+    fun `only the sender id is extracted, never the message body`() {
+        val kept = SourceApp.senderId(bankSms)
+        assertEquals("VM-HDFCBK-T", kept)
+        assertFalse(kept!!.contains("EXAMPLE"))
+        assertFalse(kept.contains("1234"))
+        assertFalse(kept.contains("100000000000"))
+    }
+
+    @Test
+    fun `a notification with no sender id keeps nothing at all`() {
+        assertEquals(null, SourceApp.senderId("Google Pay You paid Rs.850 to Zomato"))
+    }
+
+    @Test
+    fun `the bank is still recoverable from the stored sender id alone`() {
+        val stored = SourceApp.senderId(bankSms)!!
+        assertEquals("HDFC", SourceApp.label("com.google.android.apps.messaging", stored))
     }
 }
