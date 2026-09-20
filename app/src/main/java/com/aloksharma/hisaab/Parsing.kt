@@ -125,7 +125,7 @@ object NotificationParser {
 
     private fun cleanMerchant(raw: String): String = raw
         .replace(MERCHANT_TAIL, "")
-        .replace(WHITESPACE_RUN, " ")   // bank SMS pads names: "EXAMPLE  PAYEE"
+        .replace(WHITESPACE_RUN, " ")   // bank SMS pads payee names with double spaces
         .substringBefore('\n')
         .substringBefore(',')            // ", avl bal Rs.4,200" / ", balance Rs.4,200" etc.
         .trim()
