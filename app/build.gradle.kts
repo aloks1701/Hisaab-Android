@@ -1,3 +1,13 @@
+import java.util.Properties
+
+// Signing credentials live in keystore.properties, which is gitignored and never committed.
+// Absent it, release simply builds unsigned - CI and a fresh clone must not fail for want of
+// a key they are not supposed to have.
+val keystoreProperties = Properties().apply {
+    val f = rootProject.file("keystore.properties")
+    if (f.exists()) f.inputStream().use { load(it) }
+}
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose.compiler)
@@ -20,11 +30,27 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        if (keystoreProperties.getProperty("storeFile") != null) {
+            create("release") {
+                storeFile = rootProject.file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
+            // ponytail: R8 left off for the first test builds. Turning it on adds a whole
+            // failure mode (stripped Room/Compose code that only breaks at runtime) for a size
+            // win that does not matter on an internal track. Turn it on before public release
+            // and retest the capture path on a device.
             optimization {
                 enable = false
             }
+            signingConfig = signingConfigs.findByName("release")
         }
     }
     compileOptions {
