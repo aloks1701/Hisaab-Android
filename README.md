@@ -84,3 +84,7 @@ inject and nothing to fetch.
 | `Period.kt` | Month and year filtering |
 | `Strings.kt` | Hindi and English strings |
 | `Theme.kt` | Colors, typography, light and dark |
+
+## Contact
+
+Find me on X at [@friendwhocodes](https://x.com/friendwhocodes).

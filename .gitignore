@@ -25,3 +25,12 @@ keystore.properties
 # source and its CC licence requires attribution (see assets/music/CREDITS.md).
 video/out/*.wav
 video/out/bed.mp3
+
+# Rendered video is kept outside the repo; regenerate with video/assemble.py
+*.mp4
+*.mov
+*.webm
+*.mkv
+
+# The demo video pipeline lives outside this repository.
+video/
