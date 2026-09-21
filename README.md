@@ -53,7 +53,7 @@ database.
 
 ## Install
 
-Download `app-debug.apk` from the [latest release](https://github.com/aloks1701/Hisaab-Android/releases/latest),
+Download [`app-debug.apk`](https://github.com/aloks1701/Hisaab-Android/releases/latest/download/app-debug.apk) from the latest release,
 allow installs from unknown sources, and grant notification access on first run. Turn on
 Demo Data in Settings to see the app populated without making a payment.
 
