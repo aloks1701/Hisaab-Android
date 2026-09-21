@@ -19,3 +19,9 @@ local.properties
 keystore.properties
 *.jks
 *.keystore
+
+# Regenerable audio: `bash video/make-music.sh` rebuilds these from
+# video/assets/music/sitar-2015.oga, which IS tracked because it is the master
+# source and its CC licence requires attribution (see assets/music/CREDITS.md).
+video/out/*.wav
+video/out/bed.mp3
